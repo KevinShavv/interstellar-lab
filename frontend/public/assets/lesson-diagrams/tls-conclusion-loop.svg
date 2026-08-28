@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <circle cx="480" cy="280" r="170" fill="none" stroke="#6f8fcb" stroke-width="2"/>
+
+  <g stroke="#8fb2f7" fill="none" stroke-width="2">
+    <rect x="420" y="105" width="120" height="52" rx="6"/>
+    <rect x="665" y="250" width="120" height="52" rx="6"/>
+    <rect x="420" y="403" width="120" height="52" rx="6"/>
+    <rect x="175" y="250" width="120" height="52" rx="6"/>
+  </g>
+
+  <text x="480" y="137" fill="#eaf1ff" text-anchor="middle" font-size="24" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">观察现象</text>
+  <text x="725" y="282" fill="#eaf1ff" text-anchor="middle" font-size="24" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">记录证据</text>
+  <text x="480" y="435" fill="#eaf1ff" text-anchor="middle" font-size="24" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">形成结论</text>
+  <text x="235" y="282" fill="#eaf1ff" text-anchor="middle" font-size="24" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">修正模型</text>
+
+  <path d="M540 130 L652 250" stroke="#9fc0ff" stroke-width="3" fill="none"/>
+  <path d="M725 304 L540 410" stroke="#9fc0ff" stroke-width="3" fill="none"/>
+  <path d="M420 430 L290 302" stroke="#9fc0ff" stroke-width="3" fill="none"/>
+  <path d="M236 250 L420 132" stroke="#9fc0ff" stroke-width="3" fill="none"/>
+</svg>

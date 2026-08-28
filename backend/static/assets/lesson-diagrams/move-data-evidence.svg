@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <g stroke="#6f8ecf" stroke-width="2" fill="none" opacity="0.7">
+    <rect x="124" y="126" width="710" height="304" rx="0"/>
+    <line x1="124" y1="184" x2="834" y2="184"/>
+    <line x1="124" y1="246" x2="834" y2="246"/>
+    <line x1="124" y1="308" x2="834" y2="308"/>
+    <line x1="124" y1="370" x2="834" y2="370"/>
+    <line x1="320" y1="126" x2="320" y2="430"/>
+    <line x1="536" y1="126" x2="536" y2="430"/>
+  </g>
+
+  <text x="160" y="166" fill="#e8f0ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">阶段</text>
+  <text x="370" y="166" fill="#e8f0ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">速度 v (m/s)</text>
+  <text x="590" y="166" fill="#e8f0ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">受力 F (N)</text>
+
+  <text x="160" y="228" fill="#c8d9ff" font-size="26" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">转移段</text>
+  <text x="392" y="228" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">3150</text>
+  <text x="628" y="228" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">1.2×10⁴</text>
+
+  <text x="160" y="290" fill="#c8d9ff" font-size="26" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">制动段</text>
+  <text x="392" y="290" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">2680</text>
+  <text x="628" y="290" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">2.0×10⁴</text>
+
+  <text x="160" y="352" fill="#c8d9ff" font-size="26" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">捕获段</text>
+  <text x="392" y="352" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">1620</text>
+  <text x="628" y="352" fill="#c8d9ff" font-size="26" font-family="'Times New Roman',serif">2.4×10⁴</text>
+
+  <text x="124" y="486" fill="#d9e6ff" font-size="31" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">用“阶段-速度-受力”三类数据支撑结论</text>
+</svg>

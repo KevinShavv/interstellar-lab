@@ -1,0 +1,458 @@
+:root {
+  --legacy-bg: rgba(12, 18, 26, 0.82);
+  --legacy-panel: rgba(17, 24, 34, 0.84);
+  --legacy-border: rgba(146, 168, 183, 0.18);
+  --legacy-border-strong: rgba(146, 168, 183, 0.3);
+  --legacy-text: #e8edf2;
+  --legacy-muted: #9daab7;
+  --legacy-primary: #8fb5c8;
+  --legacy-primary-dim: #6f8b9a;
+  --legacy-primary-ink: #0d1b25;
+  --legacy-warm: #d2a77a;
+  --legacy-shadow: 0 20px 48px rgba(0, 0, 0, 0.34);
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  color: var(--legacy-text);
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+}
+
+button,
+input,
+select,
+label,
+span,
+strong,
+p,
+h3,
+h4,
+h5,
+a {
+  font-family: inherit;
+}
+
+input[type='range'] {
+  accent-color: var(--legacy-primary);
+}
+
+.btn-transparent,
+#pause-btn,
+#speed-minus,
+#speed-plus,
+#pauseBtn,
+#resetBtn,
+#planet-info-toggle,
+#backToMainBtn,
+#viewFreeBtn,
+#viewSatBtn,
+#viewMoonBtn {
+  min-height: 40px;
+  padding: 10px 16px !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--legacy-border) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--legacy-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(14px);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease !important;
+}
+
+.btn-transparent:hover,
+#pause-btn:hover,
+#speed-minus:hover,
+#speed-plus:hover,
+#pauseBtn:hover,
+#resetBtn:hover,
+#planet-info-toggle:hover,
+#backToMainBtn:hover,
+#viewFreeBtn:hover,
+#viewSatBtn:hover,
+#viewMoonBtn:hover {
+  transform: translateY(-1px);
+  border-color: var(--legacy-border-strong) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  box-shadow: none !important;
+}
+
+#nasa-link-btn,
+#applyOrbitSpeed,
+#autoCaptureBtn {
+  min-height: 44px;
+  padding: 11px 18px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: var(--legacy-primary) !important;
+  color: var(--legacy-primary-ink) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: transform 0.2s ease, filter 0.2s ease !important;
+}
+
+#nasa-link-btn:hover,
+#applyOrbitSpeed:hover,
+#autoCaptureBtn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+#time-scale-controls,
+#follow-panel,
+#planet-info-panel,
+#mission-status-bar,
+#mission-task-panel,
+#mission-params-panel,
+#mission-view-panel {
+  border: 0.5px solid var(--legacy-border) !important;
+  background: var(--legacy-bg) !important;
+  color: var(--legacy-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+#time-scale-controls {
+  bottom: 18px !important;
+  padding: 12px 18px !important;
+  border-radius: 8px !important;
+  gap: 10px !important;
+  align-items: center !important;
+  flex-wrap: wrap;
+  max-width: calc(100vw - 36px);
+}
+
+#time-scale-controls label,
+#time-scale-controls span,
+#anim-indicator {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1.1 !important;
+  margin: 0 !important;
+}
+
+#pause-btn,
+#speed-minus,
+#speed-plus {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-size: 18px !important;
+  flex: 0 0 40px !important;
+}
+
+#time-scale-slider {
+  flex: 1 1 180px !important;
+  min-width: 140px !important;
+}
+
+#time-scale-controls label,
+#time-scale-controls span,
+#follow-panel label,
+#follow-panel span,
+#planet-info-panel,
+#mission-status-bar,
+#mission-task-panel,
+#mission-params-panel,
+#mission-view-panel {
+  color: var(--legacy-text) !important;
+}
+
+#follow-panel {
+  top: 18px !important;
+  left: 18px !important;
+  min-width: 220px !important;
+  padding: 18px !important;
+  border-radius: 8px !important;
+}
+
+#follow-panel select {
+  min-height: 40px;
+  padding: 8px 12px !important;
+  border: 0.5px solid var(--legacy-border) !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--legacy-text) !important;
+}
+
+#planet-info-panel {
+  top: 18px !important;
+  right: 18px !important;
+  width: min(360px, calc(100vw - 36px)) !important;
+  max-height: calc(100vh - 36px) !important;
+  overflow: auto !important;
+  padding: 18px !important;
+  border-radius: 8px !important;
+}
+
+#planet-info-name,
+#mission-params-panel h4 {
+  margin: 0 0 10px !important;
+  color: var(--legacy-text) !important;
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: clamp(1.7rem, 3vw, 2.4rem) !important;
+  letter-spacing: 0.06em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+#planet-info-details,
+#planet-description-text,
+#mission-task-panel,
+#mission-params-panel,
+#mission-status-bar {
+  color: var(--legacy-muted) !important;
+  line-height: 1.6 !important;
+}
+
+#mission-back {
+  top: 18px !important;
+  left: 18px !important;
+}
+
+#mission-status-bar {
+  bottom: 18px !important;
+  padding: 14px 18px !important;
+  border-radius: 8px !important;
+}
+
+#mission-task-panel {
+  left: 18px !important;
+  bottom: 92px !important;
+  width: min(280px, calc(100vw - 36px)) !important;
+  padding: 16px 18px !important;
+  border-radius: 8px !important;
+}
+
+#mission-params-panel {
+  top: 18px !important;
+  right: 18px !important;
+  width: min(340px, calc(100vw - 36px)) !important;
+  max-height: calc(100vh - 36px) !important;
+  overflow: auto !important;
+  padding: 18px !important;
+  border-radius: 8px !important;
+}
+
+#mission-params-panel label,
+#mission-params-panel strong {
+  color: var(--legacy-text) !important;
+}
+
+#mission-params-panel span,
+#thrustControlInfo,
+#timeValue,
+#moonMassView,
+#moonVelView,
+#satVelView,
+#satState,
+#earthForceView,
+#moonForceView,
+#satMassDisplay {
+  color: var(--legacy-muted) !important;
+}
+
+#mission-params-panel input[type='range'] {
+  width: 100% !important;
+}
+
+#mission-view-panel {
+  top: 18px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+}
+
+#mission-view-panel > span {
+  color: var(--legacy-primary) !important;
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.loading {
+  background:
+    radial-gradient(circle at center, rgba(143, 181, 200, 0.08), transparent 30%),
+    #0c0e18 !important;
+}
+
+.loader {
+  border-top-color: var(--legacy-primary) !important;
+}
+
+#loading-text,
+.notification {
+  color: var(--legacy-primary) !important;
+}
+
+.notification {
+  border-left-color: var(--legacy-primary) !important;
+  border-radius: 20px !important;
+}
+
+@media (max-width: 980px) {
+  #planet-info-panel,
+  #mission-params-panel {
+    width: min(320px, calc(100vw - 32px)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  #time-scale-controls,
+  #mission-status-bar {
+    width: calc(100vw - 24px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    transform: none !important;
+    justify-content: center !important;
+  }
+
+  #mission-view-panel {
+    top: auto !important;
+    bottom: 88px !important;
+    width: calc(100vw - 24px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    transform: none !important;
+    justify-content: center !important;
+    flex-wrap: wrap;
+  }
+
+  #mission-task-panel {
+    top: 12px !important;
+    bottom: auto !important;
+  }
+
+  #mission-params-panel,
+  #planet-info-panel {
+    top: auto !important;
+    right: 12px !important;
+    left: 12px !important;
+    bottom: 144px !important;
+    width: auto !important;
+    max-height: min(46vh, 420px) !important;
+  }
+
+  #follow-panel {
+    left: 12px !important;
+    right: 12px !important;
+    top: 12px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+}
+
+/* Vercel-style black chrome override: compact corners, hairlines, no bulky cards. */
+.btn-transparent,
+#pause-btn,
+#speed-minus,
+#speed-plus,
+#pauseBtn,
+#resetBtn,
+#planet-info-toggle,
+#backToMainBtn,
+#viewFreeBtn,
+#viewSatBtn,
+#viewMoonBtn,
+#nasa-link-btn,
+#applyOrbitSpeed,
+#autoCaptureBtn {
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(0, 0, 0, 0.72) !important;
+  box-shadow: none !important;
+}
+
+#pause-btn,
+#speed-minus,
+#speed-plus {
+  border-radius: 50% !important;
+}
+
+#time-scale-controls,
+#follow-panel,
+#planet-info-panel,
+#mission-status-bar,
+#mission-task-panel,
+#mission-params-panel,
+#mission-view-panel,
+.notification {
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(0, 0, 0, 0.82) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+#follow-panel select,
+#mission-params-panel input,
+#mission-params-panel select,
+.planet-label {
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+#planet-info-toggle {
+  width: 100% !important;
+  height: 28px !important;
+  min-width: 0 !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Bright text pass for black Vercel-style panels. */
+#time-scale-controls,
+#time-scale-controls *,
+#follow-panel,
+#follow-panel *,
+#planet-info-panel,
+#planet-info-panel *,
+#mission-status-bar,
+#mission-status-bar *,
+#mission-task-panel,
+#mission-task-panel *,
+#mission-params-panel,
+#mission-params-panel *,
+#mission-view-panel,
+#mission-view-panel *,
+.notification,
+.planet-label,
+.planet-label * {
+  color: rgba(255, 255, 255, 0.94) !important;
+}
+
+#mission-params-panel span,
+#thrustControlInfo,
+#timeValue,
+#moonMassView,
+#moonVelView,
+#satVelView,
+#satState,
+#earthForceView,
+#moonForceView,
+#satMassDisplay,
+#planet-info-details,
+#planet-description-text {
+  color: rgba(255, 255, 255, 0.82) !important;
+}

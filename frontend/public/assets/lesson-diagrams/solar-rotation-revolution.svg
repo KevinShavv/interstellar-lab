@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <defs>
+    <radialGradient id="sunBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#fff6c8"/>
+      <stop offset="52%" stop-color="#ffd57a"/>
+      <stop offset="100%" stop-color="#cc7f2d"/>
+    </radialGradient>
+    <radialGradient id="earthBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#a4d2ff"/>
+      <stop offset="55%" stop-color="#4b85d8"/>
+      <stop offset="100%" stop-color="#1b3a70"/>
+    </radialGradient>
+    <filter id="sphereShadow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="4" dy="6" stdDeviation="6" flood-color="#030712" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <circle cx="460" cy="280" r="44" fill="url(#sunBody)" filter="url(#sphereShadow)"/>
+  <ellipse cx="460" cy="280" rx="210" ry="142" fill="none" stroke="#6f8fcb" stroke-width="2.5"/>
+  <circle cx="665" cy="280" r="36" fill="url(#earthBody)" filter="url(#sphereShadow)"/>
+
+  <path d="M653 226a56 56 0 1 1-11 111" fill="none" stroke="#dce9ff" stroke-width="3"/>
+  <path d="M642 337l-9-17 18 3z" fill="#dce9ff"/>
+
+  <path d="M430 94a252 252 0 0 1 274 24" fill="none" stroke="#9dbbff" stroke-width="3"/>
+  <path d="M704 118l-20-6 8 18z" fill="#9dbbff"/>
+
+  <text x="590" y="214" fill="#e8f0ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">自转：昼夜变化</text>
+  <text x="556" y="84" fill="#e8f0ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">公转：一年周期</text>
+  <g fill="#d4e2ff" font-size="43" font-family="'Times New Roman',serif" font-style="italic">
+    <text x="542" y="338">ω =</text>
+    <text x="646" y="324" text-anchor="middle">2π</text>
+    <line x1="612" y1="330" x2="680" y2="330" stroke="#d4e2ff" stroke-width="2"/>
+    <text x="646" y="356" text-anchor="middle">T</text>
+  </g>
+</svg>

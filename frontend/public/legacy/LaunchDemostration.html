@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>地月转移演示</title>
+  <link rel="stylesheet" href="/assets/simulation/styles/deepseek-widget.css" />
+  <link rel="stylesheet" href="/assets/simulation/styles/legacy-ui.css" />
+  <script src="/assets/simulation/chat/deepseek-widget.js" defer></script>
+  <style>
+    body { margin: 0; overflow: hidden; background-color: black; }
+    canvas { display: block; }
+    .btn-transparent {
+      font-size: 16px;
+      background-color: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      padding: 8px 16px;
+      margin: 2px 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .btn-transparent:hover {
+      background-color: rgba(255, 255, 255, 0.35);
+    }
+  </style>
+  <script src="/assets/simulation/three.min.js"></script>
+  <script src="/assets/simulation/OrbitControls.min.js"></script>
+  <script src="/assets/simulation/GLTFLoader.js"></script>
+</head>
+<body>
+  <div id="mission-status-bar" style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+              background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; color: white;
+              font-family: sans-serif; z-index: 1000; user-select:none;">
+    <button id="pauseBtn">暂停</button>
+    <button id="resetBtn">重置</button>
+    &nbsp;|&nbsp;
+    <span>模拟日数：<span id="simTime">0.0</span> 天</span>
+  </div>
+  <div id="mission-task-panel" style="position: fixed; bottom: 80px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 5px; width: 250px; font-size: 13px;">
+    <strong>任务目标：</strong><br />
+    从地球表面发射卫星，<br />
+    通过加速与近月制动，<br />
+    进入环月轨道。<br />
+  </div>
+  <div id="mission-params-panel" style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; color: white; font-family: sans-serif; z-index: 1000; width: 300px;">
+    <h4>参数调节与状态</h4>
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; font-weight: 500; margin-bottom: 2px;">卫星质量 (kg)：</label>
+      <input id="satMassSlider" type="range" min="100" max="5000" step="100" value="1000" style="width: 180px; vertical-align: middle;" />
+      <span id="satMassDisplay" style="display: inline-block; width: 56px; text-align: right;">1000</span>
+    </div>
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; font-weight: 500; margin-bottom: 2px;">推力速度控制：</label>
+      <span id="thrustControlInfo">使用 W/S/A/D 控制卫星</span>
+    </div>
+    <div style="margin-bottom: 12px;">
+      <label for="timeSlider">时间倍速：</label><br><br>
+      <input id="timeSlider" type="range" min="0.1" max="10" step="0.1" value="1.0" style="width: 200px;" />
+      <span id="timeValue">1.0x</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button id="applyOrbitSpeed" class="btn-transparent" style="flex: 1;">匹配轨道速度</button>
+      <button id="autoCaptureBtn" class="btn-transparent" style="flex: 1;">一键月球捕获</button>
+    </div>
+    <hr />
+    <div>
+      <strong>月球质量：</strong><span id="moonMassView">7.35×10²² kg</span><br/>
+      <strong>月球速度：</strong><span id="moonVelView">0</span> m/s
+    </div>
+    <div>
+      <strong>卫星速度：</strong><span id="satVelView">0</span> m/s
+    </div>
+    <div>
+      <strong>卫星状态：</strong><span id="satState">计算中...</span>
+    </div>
+    <div>
+      <strong>受地球引力：</strong><span id="earthForceView">--</span> N<br/>
+      <strong>受月球引力：</strong><span id="moonForceView">--</span> N
+    </div>
+  </div>
+  <div id="label-earth" style="position: absolute; color: white;">地球</div>
+  <div id="label-moon" style="position: absolute; color: white;">月球</div>
+  <div id="label-sat" style="position: absolute; color: white;">卫星</div>
+  
+<script>
+  // 全局时间控制变量
+  let timeScale = 1.0;
+  let isPaused = false;
+  let simulatedDays = 0;
+  const baseTrailLength = 180;
+  let maxTrailPoints = baseTrailLength;
+  let moonMaxTrailPoints = baseTrailLength;
+  
+  // 创建场景
+  const visualScale = 1 / 2e6; // 缩放单位，方便查看
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.15));
+  document.body.appendChild(renderer.domElement);
+
+  // 设置相机位置
+  camera.position.z = 8;
+
+  // 添加环境光
+  const light = new THREE.AmbientLight(0xffffff, 0.45);
+  scene.add(light);
+  const sunLight = new THREE.DirectionalLight(0xffffff, 1.15);
+  sunLight.position.set(140, 40, 120);
+  scene.add(sunLight);
+  const rimLight = new THREE.DirectionalLight(0x7ca1ff, 0.35);
+  rimLight.position.set(-160, 20, -130);
+  scene.add(rimLight);
+
+  // 视角跟随控制
+  // 启用 OrbitControls 控制器
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.maxDistance = 1000;
+  controls.minDistance = 1;
+
+  // 视角模式：'free' 'satellite' 'moon' 'earth'
+  let viewMode = 'free'; // 默认模式为自由
+  // 相机跟随目标
+  const cameraFollowTarget = new THREE.Object3D();
+  scene.add(cameraFollowTarget);
+
+  // UI: 切换视角按钮（增加自由按钮）
+  const viewPanel = document.createElement('div');
+  viewPanel.id = 'mission-view-panel';
+  viewPanel.style.position = 'fixed';
+  viewPanel.style.top = '10px';
+  viewPanel.style.left = '50%';
+  viewPanel.style.transform = 'translateX(-50%)';
+  viewPanel.style.background = 'rgba(0,0,0,0.7)';
+  viewPanel.style.padding = '8px 14px';
+  viewPanel.style.borderRadius = '8px';
+  viewPanel.style.color = 'white';
+  viewPanel.style.fontFamily = 'sans-serif';
+  viewPanel.style.zIndex = 1001;
+  viewPanel.style.userSelect = 'none';
+  viewPanel.innerHTML = `
+    <span style="font-size:16px;">视角：</span>
+    <button id="viewFreeBtn" class="btn-transparent">自由</button>
+    <button id="viewSatBtn" class="btn-transparent">卫星</button>
+    <button id="viewMoonBtn" class="btn-transparent">月球</button>
+  `;
+  document.body.appendChild(viewPanel);
+  const viewFreeBtn = document.getElementById('viewFreeBtn');
+  const viewSatBtn = document.getElementById('viewSatBtn');
+  const viewMoonBtn = document.getElementById('viewMoonBtn');
+  viewFreeBtn.addEventListener('click', () => { viewMode = 'free'; });
+  viewSatBtn.addEventListener('click', () => { viewMode = 'satellite'; });
+  viewMoonBtn.addEventListener('click', () => { viewMode = 'moon'; });
+
+  const textureLoader = new THREE.TextureLoader();
+
+  // 物理参数和变量
+  let satellite;
+  const G = 6.67430e-11; // 万有引力常数
+  const earthMass = 5.972e24;
+  const earthRadius = 6.371e6;
+  const dt = 60; // 每帧模拟60秒，1分钟
+  const earthPos = new THREE.Vector3(0, 0, 0);
+
+  // 卫星参数及UI变量
+  let satelliteMass = 1000;
+  const launchAltitude = 1.2e4; // 12 km，近地表发射
+  let satellitePos = new THREE.Vector3(earthRadius + launchAltitude, 0, 0);
+  // 与月球同向：从 +Y 俯视为顺时针（-Z）
+  let satelliteVel = new THREE.Vector3(0, 0, -35); // 初始离架速度
+  let launchPhaseComplete = false;
+  let moonBrakeActive = false;
+  let loiBurnActive = false;
+  let loiBurnDone = false;
+  let loiBurnElapsed = 0;
+  let moonCaptureAssistActive = false;
+  let moonForceBandCaptureActive = false;
+  let moonGravityHoldActive = false;
+  let prevMoonHoldAccelMag = 0;
+  const enableAutoMoonDecel = false; // 近月阶段不自动减速，只做捕获辅助
+
+  // 卫星质量滑块
+  const satMassSlider = document.getElementById('satMassSlider');
+  const satMassDisplay = document.getElementById('satMassDisplay');
+  satMassSlider.addEventListener('input', (event) => {
+    satelliteMass = parseFloat(event.target.value);
+    satMassDisplay.textContent = satelliteMass;
+  });
+  // 初始显示
+  satMassDisplay.textContent = satMassSlider.value;
+
+
+  // 匹配轨道速度按钮逻辑
+  document.getElementById('applyOrbitSpeed').addEventListener('click', () => {
+    const r = satellitePos.length();
+    const v = Math.sqrt(G * earthMass / r);
+    const progradeDir = getProgradeDirAroundEarth(satellitePos);
+    satelliteVel = progradeDir.multiplyScalar(v);
+    // 速度滑块已移除，无需同步显示
+  });
+
+  // 一键月球捕获按钮逻辑：直接将卫星放置到月球轨道并匹配环月速度
+  document.getElementById('autoCaptureBtn').addEventListener('click', () => {
+    const captureRadius = 1.5e7; // 1.5万公里，月球轨道半径
+    // 卫星放置在月球右侧这个距离上
+    const moonToSat = new THREE.Vector3(1, 0, 0).multiplyScalar(captureRadius);
+    satellitePos.copy(moonPos).add(moonToSat);
+
+    // 计算轨道速度：环绕月球轨道速度
+    const orbitSpeed = Math.sqrt(G * moonMass / captureRadius);
+
+    // 卫星速度 = 月球速度 + 同向环月轨道速度
+    const moonOrbitNormal = moonPos.clone().cross(moonVel).normalize();
+    const localTangential = moonOrbitNormal.clone().cross(moonToSat).normalize();
+    satelliteVel.copy(moonVel).add(localTangential.multiplyScalar(orbitSpeed));
+
+    // 更新卫星模型位置
+    if (satellite) {
+      satellite.position.copy(satellitePos.clone().multiplyScalar(visualScale));
+    }
+
+    // 清空轨迹，避免残影
+    trailPoints = [];
+    launchPhaseComplete = true;
+    moonBrakeActive = false;
+    loiBurnActive = false;
+    loiBurnDone = false;
+    loiBurnElapsed = 0;
+    moonCaptureAssistActive = false;
+    moonForceBandCaptureActive = false;
+    moonGravityHoldActive = false;
+    prevMoonHoldAccelMag = 0;
+  });
+  // 推进力与键盘交互控制
+  const manualThrustMagnitude = 0.18;
+  const maxManualThrustAccel = 0.55;
+  const keyState = {};
+  window.addEventListener('keydown', e => { keyState[e.key.toLowerCase()] = true; });
+  window.addEventListener('keyup', e => { keyState[e.key.toLowerCase()] = false; });
+
+  // 月球相关变量
+  let moon;
+  // 月球引力捕获区域圆环
+  let moonCaptureRing;
+  const moonCaptureRingRadius = 5e7;
+  const moonCaptureStateRadius = 4.5e7;
+  const moonMass = 7.34767309e22;
+  let moonDistance = 3.844e8;
+  let moonRadius = 1.737e6;
+  let moonPos = new THREE.Vector3(moonDistance, 0, 0);
+  // 从 +Y 俯视为顺时针（-Z）
+  let moonVel = new THREE.Vector3(0, 0, -1022); // 月球公转速度
+
+  let trailPoints = [];
+  let trailGeometry, trailLine;
+  let trailColorStart, trailColorEnd;
+
+  let moonTrailPoints = [];
+  let moonTrailGeometry, moonTrailLine;
+  let moonTrailColorStart, moonTrailColorEnd;
+
+  // 新增全局变量：力箭头
+  let forceArrow;
+  // 新增：地球引力箭头（绿色）、月球引力箭头（蓝色）
+  let earthForceArrow, moonForceArrow;
+
+  function getProgradeDirAroundEarth(position) {
+    const radial = position.clone().sub(earthPos);
+    const moonOrbitNormal = moonPos.clone().cross(moonVel);
+    const tangential = new THREE.Vector3().crossVectors(moonOrbitNormal, radial);
+    if (tangential.lengthSq() < 1e-8) {
+      return new THREE.Vector3(0, 0, -1);
+    }
+    return tangential.normalize();
+  }
+  
+  function createGradientTrail(colorHex, pointSizePx) {
+    const colorStart = new THREE.Color(colorHex).multiplyScalar(0.24);
+    const colorEnd = new THREE.Color(colorHex);
+    const geometry = new THREE.BufferGeometry();
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uColorA: { value: colorStart },
+        uColorB: { value: colorEnd }
+      },
+      vertexShader: `
+        attribute float aAlpha;
+        attribute float aProgress;
+        varying float vAlpha;
+        varying float vProgress;
+        void main() {
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          gl_PointSize = ${pointSizePx.toFixed(1)};
+          vAlpha = aAlpha;
+          vProgress = aProgress;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        varying float vAlpha;
+        varying float vProgress;
+        void main() {
+          float d = distance(gl_PointCoord, vec2(0.5));
+          float mask = smoothstep(0.5, 0.0, d);
+          vec3 color = mix(uColorA, uColorB, pow(vProgress, 1.05));
+          float alpha = vAlpha * mask;
+          if (alpha < 0.01) discard;
+          gl_FragColor = vec4(color, alpha);
+        }
+      `
+    });
+    const points = new THREE.Points(geometry, material);
+    points.frustumCulled = false;
+    points.renderOrder = 999;
+
+    const lineMaterial = new THREE.ShaderMaterial({
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute float aAlpha;
+        attribute vec3 aColor;
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          vAlpha = aAlpha;
+          vColor = aColor;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        varying vec3 vColor;
+        void main() {
+          float alpha = vAlpha * 0.55;
+          if (alpha < 0.01) discard;
+          gl_FragColor = vec4(vColor, alpha);
+        }
+      `
+    });
+    const line = new THREE.Line(geometry, lineMaterial);
+    line.frustumCulled = false;
+    line.renderOrder = 998;
+    scene.add(line);
+    scene.add(points);
+    return { geometry, points, line, colorStart, colorEnd };
+  }
+
+  function updateGradientTrail(physicsPoints, geometry, colorStart, colorEnd) {
+    if (!geometry || physicsPoints.length === 0) return;
+    const count = physicsPoints.length;
+    const positions = new Float32Array(count * 3);
+    const alpha = new Float32Array(count);
+    const progress = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    const mixedColor = new THREE.Color();
+    for (let i = 0; i < count; i++) {
+      const p = physicsPoints[i];
+      const t = count === 1 ? 1 : i / (count - 1);
+      positions[i * 3] = p.x * visualScale;
+      positions[i * 3 + 1] = p.y * visualScale;
+      positions[i * 3 + 2] = p.z * visualScale;
+      alpha[i] = 0.04 + 0.92 * Math.pow(t, 1.8);
+      progress[i] = t;
+      mixedColor.lerpColors(colorStart, colorEnd, Math.pow(t, 1.05));
+      colors[i * 3] = mixedColor.r;
+      colors[i * 3 + 1] = mixedColor.g;
+      colors[i * 3 + 2] = mixedColor.b;
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('aAlpha', new THREE.BufferAttribute(alpha, 1));
+    geometry.setAttribute('aProgress', new THREE.BufferAttribute(progress, 1));
+    geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, count);
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.aAlpha.needsUpdate = true;
+    geometry.attributes.aProgress.needsUpdate = true;
+    geometry.attributes.aColor.needsUpdate = true;
+  }
+
+  function computeLaunchAssistAccel() {
+    if (launchPhaseComplete) return new THREE.Vector3();
+    const radial = satellitePos.clone().sub(earthPos);
+    const r = radial.length();
+    const altitude = r - earthRadius;
+    if (altitude > 2.4e5) {
+      launchPhaseComplete = true;
+      return new THREE.Vector3();
+    }
+    const radialDir = radial.clone().normalize();
+    const tangentialDir = getProgradeDirAroundEarth(satellitePos);
+    const orbitSpeed = Math.sqrt(G * earthMass / r);
+    const tangentialSpeed = satelliteVel.dot(tangentialDir);
+    const speedDeficitRatio = THREE.MathUtils.clamp((orbitSpeed - tangentialSpeed) / orbitSpeed, 0, 1);
+    const pitchT = THREE.MathUtils.clamp(altitude / 1.4e5, 0, 1);
+    const pitchDir = radialDir.clone().multiplyScalar(1 - pitchT).add(tangentialDir.clone().multiplyScalar(0.6 + 0.4 * pitchT)).normalize();
+    const accelMagnitude = THREE.MathUtils.lerp(26, 8, pitchT);
+    const assist = tangentialDir.clone().multiplyScalar(7.5 * speedDeficitRatio);
+    return pitchDir.multiplyScalar(accelMagnitude).add(assist).clampLength(0, 32);
+  }
+
+  function computeMoonBrakeAccel() {
+    const moonToSat = satellitePos.clone().sub(moonPos);
+    const r = moonToSat.length();
+    const vRel = satelliteVel.clone().sub(moonVel);
+    const vRelMag = vRel.length();
+    if (vRelMag < 1) {
+      moonBrakeActive = false;
+      return new THREE.Vector3();
+    }
+    const radialDir = moonToSat.clone().normalize();
+    const approachSpeed = vRel.dot(radialDir);
+    const brakeOuter = 9.0e7;
+    const brakeInner = 3.5e7;
+    if (r > brakeOuter || approachSpeed >= 0) {
+      moonBrakeActive = false;
+      return new THREE.Vector3();
+    }
+    const vCircular = Math.sqrt(G * moonMass / Math.max(r, moonRadius * 1.35));
+    const vExcess = vRelMag - vCircular * 1.04;
+    if (vExcess <= 0) {
+      moonBrakeActive = false;
+      return new THREE.Vector3();
+    }
+    const zone = THREE.MathUtils.clamp((brakeOuter - r) / (brakeOuter - brakeInner), 0, 1);
+    const brakeAccel = THREE.MathUtils.lerp(0.35, 2.8, zone) * THREE.MathUtils.clamp(vExcess / 850, 0.35, 1.2);
+    moonBrakeActive = true;
+    return vRel.normalize().multiplyScalar(-brakeAccel);
+  }
+
+  function computeLoiBurnAccel() {
+    const moonToSat = satellitePos.clone().sub(moonPos);
+    const r = moonToSat.length();
+    const vRel = satelliteVel.clone().sub(moonVel);
+    const vRelMag = vRel.length();
+    if (vRelMag < 1) {
+      loiBurnActive = false;
+      return new THREE.Vector3();
+    }
+
+    const muMoon = G * moonMass;
+    const radialDir = moonToSat.clone().normalize();
+    const approachSpeed = vRel.dot(radialDir);
+    const energy = 0.5 * vRelMag * vRelMag - muMoon / Math.max(r, moonRadius * 1.2);
+
+    // 飞离月球后重新允许下一次遭遇触发 LOI
+    if (r > 1.2e8) {
+      loiBurnDone = false;
+      loiBurnActive = false;
+      loiBurnElapsed = 0;
+      return new THREE.Vector3();
+    }
+
+    const loiTriggerRadius = 3.8e7;
+    const captureRadius = 5.2e7;
+    const canTrigger = !loiBurnDone && !loiBurnActive && r < loiTriggerRadius && approachSpeed < -25;
+    const captureLike = energy < 0 || (r < 4.2e7 && approachSpeed < -80);
+    if (canTrigger && captureLike) {
+      loiBurnActive = true;
+      loiBurnElapsed = 0;
+    }
+
+    if (!loiBurnActive || r > captureRadius) {
+      loiBurnActive = false;
+      return new THREE.Vector3();
+    }
+
+    const vCircular = Math.sqrt(muMoon / Math.max(r, moonRadius * 1.5));
+    const targetFactor = 0.98; // 稍低于圆轨道速度，方便形成椭圆环月轨道
+    const speedExcess = vRelMag - vCircular * targetFactor;
+
+    loiBurnElapsed += dt * timeScale;
+    const overTime = loiBurnElapsed > 60 * 50; // 最长 50 分钟模拟时间
+    const doneBySpeed = speedExcess <= 0;
+    const doneByGeometry = r < 1.7e7 || approachSpeed > 160;
+    if (overTime || doneBySpeed || doneByGeometry) {
+      loiBurnActive = false;
+      loiBurnDone = true;
+      return new THREE.Vector3();
+    }
+
+    const zone = THREE.MathUtils.clamp((loiTriggerRadius - r) / (loiTriggerRadius - 1.8e7), 0, 1);
+    const accel = THREE.MathUtils.lerp(0.22, 1.55, zone) * THREE.MathUtils.clamp(speedExcess / 700, 0.25, 1.25);
+    return vRel.normalize().multiplyScalar(-accel);
+  }
+
+  function computeMoonCaptureAssistAccel() {
+    const moonToSat = satellitePos.clone().sub(moonPos);
+    const r = moonToSat.length();
+    const moonForce = G * moonMass * satelliteMass / (r * r);
+    const assistOuter = 5.2e7;
+    const assistInner = 2.6e7;
+    if (r > assistOuter || r < assistInner) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+
+    const vRel = satelliteVel.clone().sub(moonVel);
+    const vRelMag = vRel.length();
+    if (vRelMag < 1) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+    const radialDir = moonToSat.clone().normalize();
+    const approachSpeed = vRel.dot(radialDir);
+    // 仅在明显接近月球时辅助，避免外圈过早干预
+    if (approachSpeed > -60) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+
+    // 用户要求：当月球引力达到 e+1 / e+2 量级时再启用辅助捕获
+    if (moonForce < 1e1 || moonForce > 9.99e2) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+
+    const satSpeed = satelliteVel.length();
+    if (satSpeed < 1) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+    const satDir = satelliteVel.clone().normalize();
+
+    // 只控速，不改方向（沿当前速度方向做双向调节）
+    const vCircular = Math.sqrt(G * moonMass / Math.max(r, moonRadius * 1.35));
+    const desiredRelSpeed = vCircular * 0.98;
+    const speedError = desiredRelSpeed - vRelMag;
+
+    const zone = THREE.MathUtils.clamp((assistOuter - r) / (assistOuter - assistInner), 0, 1);
+    const gain = THREE.MathUtils.lerp(0.18, 1.10, zone);
+    let accelMag = gain * THREE.MathUtils.clamp(speedError / 500, -1.0, 1.0);
+
+    // 近月点附近加大控速，显著提高可捕获性
+    if (r < 3.2e7) {
+      accelMag *= 1.45;
+    }
+
+    // 限制辅助力度，避免突兀
+    accelMag = THREE.MathUtils.clamp(accelMag, -1.25, 0.95);
+    if (Math.abs(accelMag) < 0.015) {
+      moonCaptureAssistActive = false;
+      return new THREE.Vector3();
+    }
+    const assist = satDir.multiplyScalar(accelMag);
+
+    moonCaptureAssistActive = assist.lengthSq() > 1e-8;
+    return assist;
+  }
+
+  function computeMoonForceBandCaptureAccel() {
+    const moonToSat = satellitePos.clone().sub(moonPos);
+    const r = moonToSat.length();
+    const moonForce = G * moonMass * satelliteMass / (r * r);
+    const inForceBand = moonForce >= 1e1 && moonForce <= 3.0e3;
+    const inDistanceBand = r < 7.2e7 && r > moonRadius + 1.2e5;
+    if (!inForceBand || !inDistanceBand) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+
+    const vRel = satelliteVel.clone().sub(moonVel);
+    const vRelMag = vRel.length();
+    if (vRelMag < 1) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+    if (satelliteVel.length() < 1) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+
+    const radialDir = moonToSat.clone().normalize();
+    let orbitNormal = moonPos.clone().cross(moonVel);
+    if (orbitNormal.lengthSq() < 1e-10) {
+      orbitNormal = moonToSat.clone().cross(vRel);
+    }
+    if (orbitNormal.lengthSq() < 1e-10) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+    orbitNormal.normalize();
+    let tangentialDir = orbitNormal.clone().cross(radialDir);
+    if (tangentialDir.lengthSq() < 1e-10) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+    tangentialDir.normalize();
+    const normalDir = radialDir.clone().cross(tangentialDir).normalize();
+
+    const vRad = vRel.dot(radialDir);
+    const vTan = vRel.dot(tangentialDir);
+    const vNorm = vRel.dot(normalDir);
+    const vCircular = Math.sqrt(G * moonMass / Math.max(r, moonRadius * 1.15));
+    const targetTan = vCircular * 0.99;
+
+    const zone = THREE.MathUtils.clamp((7.2e7 - r) / (7.2e7 - (moonRadius + 8.0e6)), 0, 1);
+    const kTan = THREE.MathUtils.lerp(0.0009, 0.0025, zone);
+    const kRad = THREE.MathUtils.lerp(0.0012, 0.0034, zone);
+    const kNorm = THREE.MathUtils.lerp(0.0010, 0.0028, zone);
+
+    const aTan = tangentialDir.clone().multiplyScalar(
+      THREE.MathUtils.clamp((targetTan - vTan) * kTan, -1.6, 2.2)
+    );
+    const aRad = radialDir.clone().multiplyScalar(
+      THREE.MathUtils.clamp((-vRad) * kRad, -1.9, 1.9)
+    );
+    const aNorm = normalDir.clone().multiplyScalar(
+      THREE.MathUtils.clamp((-vNorm) * kNorm, -1.2, 1.2)
+    );
+
+    const assist = aTan.add(aRad).add(aNorm);
+
+    // 低近月点安全缓冲：避免径向下冲导致擦月
+    const altitude = r - moonRadius;
+    if (altitude < 1.2e6 && vRad < 0) {
+      const floorT = THREE.MathUtils.clamp((1.2e6 - altitude) / 1.2e6, 0, 1);
+      assist.add(radialDir.clone().multiplyScalar(THREE.MathUtils.lerp(0.12, 1.7, floorT)));
+    }
+
+    assist.clampLength(0, 2.7);
+    if (assist.lengthSq() < 1e-8) {
+      moonForceBandCaptureActive = false;
+      return new THREE.Vector3();
+    }
+
+    moonForceBandCaptureActive = true;
+    return assist;
+  }
+
+  function computeMoonGravityHoldAccel() {
+    const moonToSat = satellitePos.clone().sub(moonPos);
+    const r = moonToSat.length();
+    const radialDir = moonToSat.clone().normalize();
+    const vRel = satelliteVel.clone().sub(moonVel);
+    const approachSpeed = vRel.dot(radialDir); // <0 接近月球, >0 远离月球
+
+    const moonAccelMag = G * moonMass / (r * r);
+    const distEarth = satellitePos.clone().sub(earthPos).length();
+    const earthAccelMag = G * earthMass / (distEarth * distEarth);
+
+    // “月球明显能抓住卫星”的区间：距离足够近，且月球引力接近/超过地球引力
+    const inHoldZone = r < 4.8e7 && moonAccelMag > earthAccelMag * 0.78;
+    if (!inHoldZone) {
+      moonGravityHoldActive = false;
+      prevMoonHoldAccelMag = moonAccelMag;
+      return new THREE.Vector3();
+    }
+
+    let assist = new THREE.Vector3();
+
+    // 若正在远离月球，抑制径向外逃速度
+    if (approachSpeed > 0) {
+      const outwardDamp = THREE.MathUtils.clamp(approachSpeed / 700, 0, 1) * 0.95;
+      assist.add(radialDir.clone().multiplyScalar(-outwardDamp));
+    }
+
+    // 若月球引力相比上一帧在下降，给轻微 inward 修正，避免引力继续变小
+    if (prevMoonHoldAccelMag > 0) {
+      const dropRatio = (prevMoonHoldAccelMag - moonAccelMag) / prevMoonHoldAccelMag;
+      if (dropRatio > 0.002) {
+        const gravityRecover = THREE.MathUtils.clamp(dropRatio * 18, 0.04, 0.62);
+        assist.add(radialDir.clone().multiplyScalar(-gravityRecover));
+      }
+    }
+
+    // 温和的向内偏置，帮助维持在可捕获壳层
+    const holdRadius = 3.8e7;
+    if (r > holdRadius) {
+      const inwardBias = THREE.MathUtils.clamp((r - holdRadius) / holdRadius, 0, 1) * 0.32;
+      assist.add(radialDir.clone().multiplyScalar(-inwardBias));
+    }
+
+    // 避免该辅助额外“推快”卫星
+    if (satelliteVel.length() > 1) {
+      const satDir = satelliteVel.clone().normalize();
+      const alongSat = assist.dot(satDir);
+      if (alongSat > 0) {
+        assist.add(satDir.clone().multiplyScalar(-alongSat));
+      }
+    }
+
+    assist.clampLength(0, 1.25);
+    moonGravityHoldActive = assist.lengthSq() > 1e-8;
+    prevMoonHoldAccelMag = moonAccelMag;
+    return assist;
+  }
+
+
+  // 加载星空背景贴图并创建背景球体
+  textureLoader.load('/assets/simulation/models/starfield.jpg', function(starTexture) {
+    const starGeometry = new THREE.SphereGeometry(800, 64, 64);
+    const starMaterial = new THREE.MeshBasicMaterial({
+      map: starTexture,
+      side: THREE.BackSide
+    });
+    const starField = new THREE.Mesh(starGeometry, starMaterial);
+    scene.add(starField);
+  });
+
+  // 加载地球纹理并创建材质和网格
+  textureLoader.load('/assets/simulation/models/earth.jpg', function(texture) {
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const material = new THREE.MeshStandardMaterial({
+      map: texture,
+      bumpMap: texture,
+      bumpScale: 0.03,
+      roughness: 0.85,
+      metalness: 0.04,
+      emissive: new THREE.Color(0x111111),
+      emissiveIntensity: 0.35
+    });
+    const earthGeometry = new THREE.SphereGeometry(earthRadius * visualScale, 80, 80);
+    const earth = new THREE.Mesh(earthGeometry, material);
+    scene.add(earth);
+  });
+
+  // 加载月球纹理并创建材质和网格
+  textureLoader.load('/assets/simulation/models/moon.jpg', function(moonTexture) {
+    moonTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const moonGeometry = new THREE.SphereGeometry(moonRadius * visualScale, 96, 96);
+    const moonMaterial = new THREE.MeshStandardMaterial({
+      map: moonTexture,
+      bumpMap: moonTexture,
+      bumpScale: 0.085,
+      roughness: 0.92,
+      metalness: 0.02,
+      emissive: new THREE.Color(0x050505),
+      emissiveIntensity: 0.2
+    });
+    moon = new THREE.Mesh(moonGeometry, moonMaterial);
+    moon.position.copy(moonPos.clone().multiplyScalar(visualScale));
+    scene.add(moon);
+
+    // 添加月球捕获区域深灰色圆环
+    const ringRadius = moonCaptureRingRadius * visualScale;
+    const ringGeometry = new THREE.RingGeometry(ringRadius * 0.98, ringRadius * 1.02, 64);
+    const ringMaterial = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
+    moonCaptureRing = new THREE.Mesh(ringGeometry, ringMaterial);
+    moonCaptureRing.rotation.x = Math.PI / 2;
+    moonCaptureRing.position.copy(moon.position);
+    scene.add(moonCaptureRing);
+
+    const moonTrail = createGradientTrail(0xa0cfff, 4.0);
+    moonTrailGeometry = moonTrail.geometry;
+    moonTrailLine = moonTrail.line;
+    moonTrailColorStart = moonTrail.colorStart;
+    moonTrailColorEnd = moonTrail.colorEnd;
+  });
+
+  // ★ 复用 Vector3 减少 GC（地月转移）
+  const _physicsWorkVec = new THREE.Vector3();
+  const _physicsWorkVec2 = new THREE.Vector3();
+  const _satPos = new THREE.Vector3();
+  const _satVel = new THREE.Vector3();
+  let _earthWorldPos = new THREE.Vector3();
+
+  // 初始化函数，加载卫星模型
+  function init() {
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.load('/assets/simulation/models/Agena.glb', function(gltf) {
+      satellite = gltf.scene;
+      satellite.scale.set(0.01, 0.01, 0.01);
+      satellite.position.copy(satellitePos.clone().multiplyScalar(visualScale));
+      scene.add(satellite);
+
+      satellite.traverse(function(child) {
+        if (child.isMesh) {
+          child.material.emissive = new THREE.Color(0x222222);
+        }
+      });
+
+      const satTrail = createGradientTrail(0xffc87a, 5.2);
+      trailGeometry = satTrail.geometry;
+      trailLine = satTrail.line;
+      trailColorStart = satTrail.colorStart;
+      trailColorEnd = satTrail.colorEnd;
+
+      // 初始化合力箭头（红色）
+      const arrowDir = new THREE.Vector3(1, 0, 0);
+      forceArrow = new THREE.ArrowHelper(arrowDir, new THREE.Vector3(0, 0, 0), 0.6, 0xff0000);
+      scene.add(forceArrow);
+
+      // 地球引力箭头（绿色）
+      earthForceArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.6, 0x00ff00);
+      scene.add(earthForceArrow);
+
+      // 月球引力箭头（蓝色）
+      moonForceArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.6, 0x0000ff);
+      scene.add(moonForceArrow);
+    });
+  }
+
+  init();
+
+  document.getElementById('timeSlider').value = timeScale;
+  document.getElementById('timeValue').textContent = timeScale.toFixed(1) + 'x';
+
+  document.getElementById('timeSlider').addEventListener('input', (event) => {
+    timeScale = parseFloat(event.target.value);
+    document.getElementById('timeValue').textContent = timeScale.toFixed(1) + 'x';
+  });
+  document.getElementById('pauseBtn').addEventListener('click', (event) => {
+    isPaused = !isPaused;
+    event.currentTarget.textContent = isPaused ? '恢复' : '暂停';
+  });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    location.reload(); // 刷新页面以重置所有状态
+  });
+
+  function updateLabelPosition(obj, labelId) {
+    // obj.position 必须是世界坐标
+    // 获取世界坐标（如果是THREE.Object3D，position为本地坐标，需转世界坐标）
+    let worldPos;
+    if (obj.isObject3D) {
+      worldPos = new THREE.Vector3();
+      obj.getWorldPosition(worldPos);
+    } else if (obj.position) {
+      worldPos = obj.position.clone();
+    } else {
+      worldPos = new THREE.Vector3(0, 0, 0);
+    }
+    const vector = worldPos.project(camera);
+    const x = (vector.x + 1) / 2 * window.innerWidth;
+    const y = (-vector.y + 1) / 2 * window.innerHeight;
+    const label = document.getElementById(labelId);
+    label.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+  }
+
+  // 渲染循环
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // 暂停判断
+    if (isPaused) {
+      renderer.render(scene, camera);
+      return;
+    }
+
+    // 累积模拟时间（1天=86400秒）
+    simulatedDays += dt * timeScale / 86400;
+    document.getElementById('simTime').textContent = simulatedDays.toFixed(1);
+    // 动态调整尾迹长度（限制上限，避免倍速过高时性能抖动）
+    maxTrailPoints = THREE.MathUtils.clamp(Math.floor(baseTrailLength * timeScale), 110, 560);
+    moonMaxTrailPoints = THREE.MathUtils.clamp(Math.floor(baseTrailLength * timeScale), 110, 560);
+
+    if (satellite) {
+      // 卫星受地球和月球万有引力共同作用
+      const rEarth = satellitePos.clone().sub(earthPos);
+      const distEarth = rEarth.length();
+      const accelEarth = rEarth.clone().normalize().multiplyScalar(-G * earthMass / (distEarth * distEarth));
+
+      const rMoon = satellitePos.clone().sub(moonPos);
+      const distMoon = rMoon.length();
+      const accelMoon = rMoon.clone().normalize().multiplyScalar(-G * moonMass / (distMoon * distMoon));
+
+      // 总引力加速度
+      const gravityAccel = accelEarth.clone().add(accelMoon);
+
+      // === 推力加速度段 ===
+      let thrustAccel = new THREE.Vector3();
+      const controlScale = 1 / Math.sqrt(Math.max(timeScale, 1));
+      if (keyState['w'] && satelliteVel.length() > 0) {
+        thrustAccel.add(satelliteVel.clone().normalize().multiplyScalar(manualThrustMagnitude * controlScale));
+      }
+      if (keyState['s'] && satelliteVel.length() > 0) {
+        thrustAccel.add(satelliteVel.clone().normalize().multiplyScalar(-manualThrustMagnitude * controlScale));
+      }
+      if (keyState['a'] && satelliteVel.length() > 0) {
+        const left = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), satelliteVel).normalize();
+        thrustAccel.add(left.multiplyScalar(manualThrustMagnitude * controlScale));
+      }
+      if (keyState['d'] && satelliteVel.length() > 0) {
+        const right = new THREE.Vector3().crossVectors(satelliteVel, new THREE.Vector3(0, 1, 0)).normalize();
+        thrustAccel.add(right.multiplyScalar(manualThrustMagnitude * controlScale));
+      }
+      if (thrustAccel.length() > maxManualThrustAccel) {
+        thrustAccel.setLength(maxManualThrustAccel);
+      }
+      const launchAssistAccel = computeLaunchAssistAccel();
+      let moonBrakeAccel = new THREE.Vector3();
+      let loiBurnAccel = new THREE.Vector3();
+      if (enableAutoMoonDecel) {
+        moonBrakeAccel = computeMoonBrakeAccel();
+        loiBurnAccel = computeLoiBurnAccel();
+      } else {
+        moonBrakeActive = false;
+        loiBurnActive = false;
+      }
+      moonCaptureAssistActive = false;
+      moonGravityHoldActive = false;
+      const moonCaptureAssistAccel = new THREE.Vector3();
+      const moonForceBandCaptureAccel = computeMoonForceBandCaptureAccel();
+      const moonGravityHoldAccel = new THREE.Vector3();
+      const finalAccel = gravityAccel.clone()
+        .add(thrustAccel)
+        .add(launchAssistAccel)
+        .add(moonBrakeAccel)
+        .add(loiBurnAccel)
+        .add(moonCaptureAssistAccel)
+        .add(moonForceBandCaptureAccel)
+        .add(moonGravityHoldAccel);
+      satelliteVel.add(finalAccel.clone().multiplyScalar(dt * timeScale));
+      satellitePos.add(satelliteVel.clone().multiplyScalar(dt * timeScale));
+
+      // 地表约束：避免数值误差导致穿地
+      const earthToSatNow = satellitePos.clone().sub(earthPos);
+      if (earthToSatNow.length() < earthRadius + 500) {
+        const surfaceNormal = earthToSatNow.normalize();
+        satellitePos.copy(surfaceNormal.multiplyScalar(earthRadius + 500));
+        const inwardSpeed = satelliteVel.dot(surfaceNormal);
+        if (inwardSpeed < 0) {
+          satelliteVel.add(surfaceNormal.multiplyScalar(-inwardSpeed + 2));
+        }
+      }
+
+      satellite.position.copy(satellitePos.clone().multiplyScalar(visualScale));
+
+      // 更新合力引力箭头（红色）
+      const forceDir = gravityAccel.clone().normalize();
+      forceArrow.setDirection(forceDir);
+      forceArrow.position.copy(satellite.position);
+      forceArrow.setLength(3.0);
+
+      // 更新地球引力箭头（绿色）
+      earthForceArrow.setDirection(accelEarth.clone().normalize());
+      earthForceArrow.position.copy(satellite.position);
+      earthForceArrow.setLength(3.0);
+
+      // 更新月球引力箭头（蓝色）
+      moonForceArrow.setDirection(accelMoon.clone().normalize());
+      moonForceArrow.position.copy(satellite.position);
+      moonForceArrow.setLength(3.0);
+
+      trailPoints.push(satellitePos.clone());
+      if (trailPoints.length > maxTrailPoints) trailPoints.shift();
+      updateGradientTrail(trailPoints, trailGeometry, trailColorStart, trailColorEnd);
+
+      if (satellite && moon) {
+        const rVec = satellitePos.clone().sub(moonPos);
+        const r = rVec.length();
+        const vRelVec = satelliteVel.clone().sub(moonVel);
+        const vRel = vRelVec.length();
+        const energy = 0.5 * vRel * vRel - G * moonMass / Math.max(r, moonRadius);
+        const radialDirState = rVec.clone().normalize();
+        const vRadState = vRelVec.dot(radialDirState);
+        const vCircularMoon = Math.sqrt(G * moonMass / Math.max(r, moonRadius * 1.35));
+        const nearCircularBySpeed = Math.abs(vRel - vCircularMoon) / Math.max(vCircularMoon, 1) < 0.42;
+        const smallRadialDrift = Math.abs(vRadState) < 260;
+
+        let state = launchPhaseComplete ? '地月转移中' : '地表发射段';
+        if (loiBurnActive) {
+          state = 'LOI制动中';
+        }
+        if (moonBrakeActive && !loiBurnActive) {
+          state = '近月制动中';
+        }
+        if (moonCaptureAssistActive) {
+          state = '捕获辅助中';
+        }
+        if (moonForceBandCaptureActive) {
+          state = '环月公转引导中';
+        }
+        if (moonGravityHoldActive) {
+          state = '引力保持辅助中';
+        }
+        if ((energy < 0 || (nearCircularBySpeed && smallRadialDrift)) && r < moonCaptureStateRadius) {
+          state = '月球捕获中';
+        }
+        if (satellitePos.length() > 6e8) {
+          state = '逃逸中';
+        }
+        document.getElementById('satState').textContent = state;
+        // 地球对卫星引力
+        const distToEarth = satellitePos.clone().sub(earthPos).length();
+        const earthForce = G * earthMass * satelliteMass / (distToEarth * distToEarth);
+        document.getElementById('earthForceView').textContent = earthForce.toExponential(2);
+        // 月球对卫星引力
+        const distToMoon = satellitePos.clone().sub(moonPos).length();
+        const moonForce = G * moonMass * satelliteMass / (distToMoon * distToMoon);
+        document.getElementById('moonForceView').textContent = moonForce.toExponential(2);
+        // 调试信息打印
+        // console.log(`r = ${r.toFixed(0)}, vRel = ${vRel.toFixed(2)}, energy = ${energy.toExponential(2)}`);
+      }
+    }
+    // 更新速度数据显示
+    document.getElementById('satVelView').textContent = satelliteVel.length().toFixed(1);
+    document.getElementById('moonVelView').textContent = moonVel.length().toFixed(1);
+
+    if (moon) {
+      const rMoon = moonPos.clone().sub(earthPos);
+      const distMoon = rMoon.length();
+      const accelMoon = rMoon.clone().normalize().multiplyScalar(-G * earthMass / (distMoon * distMoon));
+
+      moonVel.add(accelMoon.multiplyScalar(dt * timeScale));
+      moonPos.add(moonVel.clone().multiplyScalar(dt * timeScale));
+
+      moon.position.copy(moonPos.clone().multiplyScalar(visualScale));
+
+      // 跟随月球移动捕获区圆环
+      if (moonCaptureRing) {
+        moonCaptureRing.position.copy(moon.position);
+      }
+
+      moonTrailPoints.push(moonPos.clone());
+      if (moonTrailPoints.length > moonMaxTrailPoints) moonTrailPoints.shift();
+      updateGradientTrail(moonTrailPoints, moonTrailGeometry, moonTrailColorStart, moonTrailColorEnd);
+    }
+
+    // ==== 自然跟随视角逻辑 ====
+    // 更新 cameraFollowTarget 位置，仅非自由模式下
+    if (viewMode === 'satellite' && satellite) {
+      // 使用世界坐标同步
+      cameraFollowTarget.position.copy(satellite.getWorldPosition(new THREE.Vector3()));
+    } else if (viewMode === 'moon' && moon) {
+      cameraFollowTarget.position.copy(moon.getWorldPosition(new THREE.Vector3()));
+    }
+    // 非自由模式下，相机目标固定为 cameraFollowTarget，允许自由旋转，但目标不变
+    // 不再直接控制 camera.position/camera.lookAt，由 OrbitControls 接管
+    // ========================
+
+    // OrbitControls 视角控制配置
+    if (viewMode === 'free') {
+      controls.enabled = true;
+      controls.enablePan = true;
+      controls.update();
+    } else {
+      controls.enabled = true;
+      controls.enablePan = false;
+      controls.target.copy(cameraFollowTarget.position);
+      controls.update();
+    }
+
+    // 标签位置更新，确保使用世界坐标
+    if (satellite) updateLabelPosition(satellite, 'label-sat');
+    if (moon) updateLabelPosition(moon, 'label-moon');
+    // 地球为原点
+    updateLabelPosition({ position: new THREE.Vector3(0, 0, 0) }, 'label-earth');
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // 窗口大小调整处理
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+<script src="/assets/simulation/legacy-i18n.js"></script>
+</body>
+</html>

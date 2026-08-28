@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <defs>
+    <linearGradient id="ray" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffe7a2" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#ffe7a2" stop-opacity="0.12"/>
+    </linearGradient>
+    <radialGradient id="sunBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#fff6c8"/>
+      <stop offset="52%" stop-color="#ffd57a"/>
+      <stop offset="100%" stop-color="#cc7f2d"/>
+    </radialGradient>
+    <radialGradient id="earthBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#a4d2ff"/>
+      <stop offset="55%" stop-color="#4b85d8"/>
+      <stop offset="100%" stop-color="#1b3a70"/>
+    </radialGradient>
+    <filter id="sphereShadow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="4" dy="6" stdDeviation="6" flood-color="#030712" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <circle cx="160" cy="280" r="66" fill="url(#sunBody)" filter="url(#sphereShadow)"/>
+  <circle cx="660" cy="280" r="86" fill="url(#earthBody)" filter="url(#sphereShadow)"/>
+
+  <line x1="620" y1="198" x2="700" y2="364" stroke="#f0f6ff" stroke-width="4"/>
+  <path d="M700 364l-10-18 18 6z" fill="#f0f6ff"/>
+
+  <g stroke="url(#ray)" stroke-width="11" stroke-linecap="round">
+    <line x1="236" y1="230" x2="560" y2="230"/>
+    <line x1="236" y1="280" x2="560" y2="280"/>
+    <line x1="236" y1="330" x2="560" y2="330"/>
+  </g>
+
+  <path d="M560 146a190 190 0 0 1 220 0" fill="none" stroke="#90b7ff" stroke-width="3"/>
+  <path d="M780 146l-20-4 10 16z" fill="#90b7ff"/>
+
+  <text x="114" y="288" fill="#eef1f8" font-size="26" font-weight="700" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">太阳</text>
+  <text x="632" y="289" fill="#eef4ff" font-size="26" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">地球</text>
+  <text x="706" y="390" fill="#eaf1ff" font-size="26" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">地轴倾角 θ</text>
+
+  <text x="540" y="98" fill="#e8f0ff" font-size="38" font-weight="700" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">四季由“倾角+公转”决定</text>
+  <text x="540" y="138" fill="#c8d8ff" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">不是单纯由地日距离决定</text>
+</svg>

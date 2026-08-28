@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+  <defs>
+    <radialGradient id="earthBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#a4d2ff"/>
+      <stop offset="55%" stop-color="#4b85d8"/>
+      <stop offset="100%" stop-color="#1b3a70"/>
+    </radialGradient>
+    <radialGradient id="moonBody" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#f1f3f8"/>
+      <stop offset="100%" stop-color="#7f8797"/>
+    </radialGradient>
+    <filter id="sphereShadow" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="4" dy="6" stdDeviation="6" flood-color="#030712" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+
+  <circle cx="260" cy="280" r="54" fill="url(#earthBody)" filter="url(#sphereShadow)"/>
+  <circle cx="660" cy="280" r="36" fill="url(#moonBody)" filter="url(#sphereShadow)"/>
+
+  <line x1="316" y1="280" x2="620" y2="280" stroke="#8fb1f1" stroke-width="3"/>
+  <text x="470" y="260" fill="#e8f0ff" font-size="31" text-anchor="middle" font-family="'Times New Roman',serif" font-style="italic">r</text>
+
+  <line x1="338" y1="250" x2="294" y2="250" stroke="#ffb7a8" stroke-width="3"/>
+  <path d="M294 250l12-8-1 16z" fill="#ffb7a8"/>
+  <line x1="582" y1="250" x2="626" y2="250" stroke="#ffb7a8" stroke-width="3"/>
+  <path d="M626 250l-12-8 1 16z" fill="#ffb7a8"/>
+
+  <text x="300" y="232" fill="#ffd8ce" font-size="29" font-family="'Times New Roman',serif" font-style="italic">F</text>
+  <text x="598" y="232" fill="#ffd8ce" font-size="29" font-family="'Times New Roman',serif" font-style="italic">F</text>
+
+  <g fill="#e8f0ff" font-size="50" font-family="'Times New Roman',serif" font-style="italic">
+    <text x="420" y="364">F = G</text>
+    <text x="564" y="350" text-anchor="middle">m₁ m₂</text>
+    <line x1="520" y1="356" x2="608" y2="356" stroke="#e8f0ff" stroke-width="2"/>
+    <text x="564" y="382" text-anchor="middle">r²</text>
+  </g>
+  <text x="388" y="410" fill="#b8cdf8" font-size="29" font-family="'Times New Roman','PingFang SC','Microsoft YaHei',sans-serif">当 r 变为 2r 时，F 约变为原来的四分之一</text>
+</svg>

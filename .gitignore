@@ -1,0 +1,27 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- Django / SQLite ----
+db.sqlite3
+*.sqlite3
+backend/staticfiles/
+
+# ---- Node / Vite (frontend) ----
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# ---- 大型星历数据（超过 GitHub 单文件 100MB 限制）----
+*.bsp
+backend/de440.bsp
+
+# ---- 工具与编辑器 ----
+.DS_Store
+Thumbs.db
+.vscode/
