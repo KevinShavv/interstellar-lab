@@ -5,7 +5,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useSiteChrome } from '@/composables/useSiteChrome'
 
 const route = useRoute()
-const { headerText, navItems } = useSiteChrome()
+const { currentLang, headerText, navItems, toggleLanguage } = useSiteChrome()
 
 const activePath = computed(() => route.path)
 </script>
@@ -35,6 +35,21 @@ const activePath = computed(() => route.path)
         </nav>
       </div>
 
+      <div class="site-header__right">
+        <div class="site-header__controls">
+          <button
+            type="button"
+            class="site-lang-toggle"
+            :title="currentLang === 'zh' ? 'Switch to English' : '切换到中文'"
+            :aria-label="currentLang === 'zh' ? 'Switch to English' : '切换到中文'"
+            @click="toggleLanguage"
+          >
+            <span class="site-lang-toggle__option" :class="{ 'is-active': currentLang === 'zh' }">中</span>
+            <span class="site-lang-toggle__divider">/</span>
+            <span class="site-lang-toggle__option" :class="{ 'is-active': currentLang === 'en' }">EN</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 </template>
@@ -129,6 +144,46 @@ const activePath = computed(() => route.path)
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.site-lang-toggle {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(29, 29, 31, 0.9);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.site-lang-toggle:hover {
+  background: rgba(51, 51, 51, 0.92);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.site-lang-toggle__option {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.2s ease;
+}
+
+.site-lang-toggle__option.is-active {
+  color: #fff;
+  font-weight: 600;
+}
+
+.site-lang-toggle__divider {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .site-chip {

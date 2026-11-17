@@ -1,6 +1,7 @@
 (() => {
   const storageKey = 'site-lang';
-  let currentLang = window.localStorage.getItem(storageKey) === 'en' ? 'en' : 'zh';
+  // 默认英文；仅当用户明确保存过 'zh' 时才用中文
+  let currentLang = window.localStorage.getItem(storageKey) === 'zh' ? 'zh' : 'en';
 
   const solarNames = {
     zh: {

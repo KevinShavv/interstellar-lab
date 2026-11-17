@@ -39,9 +39,23 @@ _EPHEM_DIR = _EPHEM_FILE.parent if _EPHEM_FILE else Path(__file__).resolve().par
 # ── 镜像地址 ────────────────────────────────────────────────────────
 _DE440_MIRRORS = [
     "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440.bsp",
+    # JPL 官方站点在部分网络环境不可达，HuggingFace 上有一份同源镜像（含 LFS 校验和）
+    "https://hf-mirror.com/datasets/phanerozoic/JPL-DE440-DE441/resolve/main/spk/de440.bsp",
 ]
 
-DE440_EXPECTED_SIZE = 523685888  # ~500 MB
+DE440_EXPECTED_SIZE = 119799808  # 实际 de440.bsp 字节数（NAIF 原版，约 114 MB）
+
+
+def _ephem_label():
+    """按实际加载的文件名推断星历版本，例如 de440.bsp → DE440。"""
+    if _EPHEM_FILE is None:
+        return "DE440"
+    return _EPHEM_FILE.stem.upper()
+
+
+def _ephem_source():
+    """返回给前端展示的星历来源标签，避免与真实加载的文件不符。"""
+    return f"Skyfield (JPL {_ephem_label()})"
 
 
 def _download_instructions():
@@ -49,11 +63,13 @@ def _download_instructions():
     dest = str(_EPHEM_DIR / "de440.bsp")
     print(f"""
 ╔══════════════════════════════════════════════════════════════════╗
-║  Skyfield 星历文件缺失 — 请手动下载 de440.bsp (~500MB)          ║
+║  Skyfield 星历文件缺失 — 请手动下载 de440.bsp (~114MB)          ║
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                  ║
 ║  URL: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/   ║
 ║       planets/de440.bsp                                          ║
+║  镜像: https://hf-mirror.com/datasets/phanerozoic/               ║
+║        JPL-DE440-DE441/resolve/main/spk/de440.bsp                ║
 ║                                                                  ║
 ║  或运行: python backend/simulation/services/skyfield_calculator.py║
 ║                                                                  ║
@@ -64,10 +80,18 @@ def _download_instructions():
 
 
 def download_ephemeris():
-    """尝试从镜像下载星历文件。"""
+    """尝试从镜像下载星历文件，返回是否成功。
+
+    模块级 `_EPHEM_FILE` 在导入时按候选路径探测，全新环境下为 None，
+    因此这里必须写入 `_EPHEM_DIR` 下的目标路径，不能直接 open(_EPHEM_FILE)。
+    """
     import urllib.request
 
+    global _EPHEM_FILE, _EPHEM_DIR
+
     _EPHEM_DIR.mkdir(parents=True, exist_ok=True)
+    dest = _EPHEM_DIR / "de440.bsp"
+    part = dest.with_suffix(".bsp.part")
 
     for url in _DE440_MIRRORS:
         print(f"正在尝试从 {url} 下载...")
@@ -77,11 +101,11 @@ def download_ephemeris():
                 headers={"User-Agent": "SolarSystemEdu/1.0"},
             )
             with urllib.request.urlopen(req, timeout=300) as resp:
-                total = int(resp.headers.get("Content-Length", 0))
+                total = int(resp.headers.get("Content-Length") or 0)
                 if total:
                     print(f"  文件大小: {total / 1024 / 1024:.1f} MB")
                 downloaded = 0
-                with open(_EPHEM_FILE, "wb") as f:
+                with open(part, "wb") as f:
                     while True:
                         chunk = resp.read(1024 * 1024)
                         if not chunk:
@@ -93,9 +117,20 @@ def download_ephemeris():
                             mb = downloaded / 1024 / 1024
                             print(f"\r  下载进度: {pct}% ({mb:.1f}/{total / 1024 / 1024:.1f}MB)", end="")
                 print(f"\n  下载完成! 大小: {downloaded / 1024 / 1024:.1f} MB")
-                return True
+            if downloaded != DE440_EXPECTED_SIZE:
+                print(
+                    f"  校验失败: 期望 {DE440_EXPECTED_SIZE} 字节，实际 {downloaded} 字节，"
+                    "换下一个镜像。"
+                )
+                part.unlink(missing_ok=True)
+                continue
+            os.replace(part, dest)
+            _EPHEM_FILE = dest
+            print(f"  已就位: {dest}")
+            return True
         except Exception as exc:
             print(f"  失败: {exc}")
+            part.unlink(missing_ok=True)
             continue
 
     print("所有镜像均下载失败，请手动下载。")
@@ -246,7 +281,7 @@ def compute_position(body_key, center_key="sun", date=None):
         "vz": round(velocity[2], 6),
         "distance_km": round(distance, 4),
         "distance_au": round(distance / 149597870.7, 8),
-        "source": "Skyfield (JPL DE430)",
+        "source": _ephem_source(),
     }
 
 
@@ -314,7 +349,7 @@ def compute_positions_range(body_key, center_key="sun", start_date=None, stop_da
         "start_date": start_dt.strftime("%Y-%m-%d"),
         "stop_date": stop_dt.strftime("%Y-%m-%d"),
         "positions": positions,
-        "source": "Skyfield (JPL DE430)",
+        "source": _ephem_source(),
     }
 
 
@@ -337,11 +372,11 @@ def get_body_info(body_key):
 
     # 距太阳距离
     astro_sun = sun.at(t_now).observe(body)
-    dist_sun_au = astro_sun.distance().AU
+    dist_sun_au = astro_sun.distance().au
 
     # 距地球距离
     astro_earth = earth.at(t_now).observe(body)
-    dist_earth_au = astro_earth.distance().AU
+    dist_earth_au = astro_earth.distance().au
 
     return {
         "key": body_key,
@@ -351,5 +386,5 @@ def get_body_info(body_key):
         "distance_sun_km": round(dist_sun_au * 149597870.7, 4),
         "distance_earth_au": round(dist_earth_au, 6),
         "distance_earth_km": round(dist_earth_au * 149597870.7, 4),
-        "source": "Skyfield (JPL DE430)",
+        "source": _ephem_source(),
     }

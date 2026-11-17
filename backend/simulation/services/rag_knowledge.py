@@ -142,7 +142,7 @@ def _tokenize(text: str) -> set:
     """简单中文分词：按标点和空格切分，同时保留双字和三字子串。"""
     tokens = set()
     # 去除标点
-    cleaned = re.sub(r"[，。！？、；：""（）【】《》\s]+", " ", text)
+    cleaned = re.sub(r"[，。！？、；：（）【】《》\s]+", " ", text)
     # 按空格分割
     words = [w for w in cleaned.split() if len(w) >= 1]
     for w in words:

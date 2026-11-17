@@ -383,7 +383,7 @@ _skyfield_position_cache = {}
 
 
 class SkyfieldPositionView(APIView):
-    """使用 Skyfield + JPL DE430 本地星历计算天体位置（完全离线）。"""
+    """使用 Skyfield + JPL DE440 本地星历计算天体位置（完全离线）。"""
 
     def get(self, request):
         try:

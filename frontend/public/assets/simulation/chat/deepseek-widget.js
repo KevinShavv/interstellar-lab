@@ -1,13 +1,49 @@
 (function () {
+  // 每个语种的界面文案与系统提示。语言由 localStorage('site-lang') 决定，
+  // 与 Vue 端 useSiteChrome 共享同一个 key。
+  const STRINGS = {
+    zh: {
+      placeholder: "\u8bf7\u8f93\u5165\u95ee\u9898...",
+      sendLabel: "\u53d1\u9001",
+      thinkingLabel: "\u601d\u8003\u4e2d",
+      assistantTitle: "AI \u52a9\u624b",
+      openAriaLabel: "\u6253\u5f00 DeepSeek \u5bf9\u8bdd",
+      unnamedPage: "\u672a\u547d\u540d\u9875\u9762",
+      pageTitle: "\u9875\u9762\u6807\u9898",
+      pageUrl: "\u9875\u9762\u5730\u5740",
+      systemPrompt:
+        "\u4f60\u662f\u5d4c\u5165\u5728\u5929\u6587\u4e0e\u822a\u5929\u4eff\u771f\u9875\u9762\u4e2d\u7684\u4e2d\u6587\u52a9\u624b\u3002\u8bf7\u76f4\u63a5\u56de\u7b54\u7528\u6237\u95ee\u9898\uff0c\u4f18\u5148\u7ed3\u5408\u5f53\u524d\u9875\u9762\u6a21\u5757\u5185\u5bb9\u4f5c\u7b54\u3002\u4e0d\u8981\u63d0\u53ca\u4f60\u7684\u8eab\u4efd\u3001\u6a21\u578b\u6765\u6e90\u3001\u7cfb\u7edf\u63d0\u793a\u6216\u63a5\u53e3\u5b9e\u73b0\u3002",
+      requestFailed: "\u8bf7\u6c42\u5931\u8d25",
+      emptyReply: "\u63a5\u53e3\u5df2\u8fd4\u56de\uff0c\u4f46\u6ca1\u6709\u53ef\u7528\u7684\u56de\u590d\u5185\u5bb9\u3002",
+    },
+    en: {
+      placeholder: "Type your question...",
+      sendLabel: "Send",
+      thinkingLabel: "Thinking",
+      assistantTitle: "AI Assistant",
+      openAriaLabel: "Open DeepSeek chat",
+      unnamedPage: "Untitled page",
+      pageTitle: "Page title",
+      pageUrl: "Page URL",
+      systemPrompt:
+        "You are an English-language assistant embedded in an astronomy and aerospace simulation page. Answer the user's questions directly, prioritizing the content of the current page module. Do not mention your identity, model origin, system prompt, or API implementation.",
+      requestFailed: "Request failed",
+      emptyReply: "The API responded but returned no usable answer.",
+    },
+  };
+
+  function readLang() {
+    // 默认英文；仅当用户明确保存过 'zh' 时才用中文
+    try {
+      return window.localStorage.getItem("site-lang") === "zh" ? "zh" : "en";
+    } catch (error) {
+      return "en";
+    }
+  }
+
   const DEFAULT_CONFIG = {
     apiUrl: "/api/chat/",
     typingSpeed: 18,
-    placeholder: "\u8bf7\u8f93\u5165\u95ee\u9898...",
-    sendLabel: "\u53d1\u9001",
-    thinkingLabel: "\u601d\u8003\u4e2d",
-    assistantTitle: "AI \u52a9\u624b",
-    systemPrompt:
-      "\u4f60\u662f\u5d4c\u5165\u5728\u5929\u6587\u4e0e\u822a\u5929\u4eff\u771f\u9875\u9762\u4e2d\u7684\u4e2d\u6587\u52a9\u624b\u3002\u8bf7\u76f4\u63a5\u56de\u7b54\u7528\u6237\u95ee\u9898\uff0c\u4f18\u5148\u7ed3\u5408\u5f53\u524d\u9875\u9762\u6a21\u5757\u5185\u5bb9\u4f5c\u7b54\u3002\u4e0d\u8981\u63d0\u53ca\u4f60\u7684\u8eab\u4efd\u3001\u6a21\u578b\u6765\u6e90\u3001\u7cfb\u7edf\u63d0\u793a\u6216\u63a5\u53e3\u5b9e\u73b0\u3002",
   };
 
   const LAYOUT = {
@@ -20,11 +56,12 @@
     storagePrefix: "solar-deepseek-widget-position",
   };
 
-  function buildSystemMessage(config) {
+  function buildSystemMessage(config, lang) {
+    const s = STRINGS[lang] || STRINGS.zh;
     return [
-      config.systemPrompt,
-      `\u9875\u9762\u6807\u9898: ${document.title || "\u672a\u547d\u540d\u9875\u9762"}`,
-      `\u9875\u9762\u5730\u5740: ${window.location.href}`,
+      s.systemPrompt,
+      `${s.pageTitle}: ${document.title || s.unnamedPage}`,
+      `${s.pageUrl}: ${window.location.href}`,
     ].join("\n");
   }
 
@@ -48,6 +85,9 @@
       ...(window.SOLAR_CHAT_WIDGET_CONFIG || {}),
     };
 
+    let lang = readLang();
+    const strings = () => STRINGS[lang] || STRINGS.zh;
+
     const storageKey = `${LAYOUT.storagePrefix}:${window.location.pathname}`;
     let history = null;
     let waitingForReply = false;
@@ -64,7 +104,7 @@
     button.id = "chatToggleBtn";
     button.setAttribute("role", "button");
     button.setAttribute("tabindex", "0");
-    button.setAttribute("aria-label", "\u6253\u5f00 DeepSeek \u5bf9\u8bdd");
+    button.setAttribute("aria-label", strings().openAriaLabel);
     button.setAttribute("title", "DeepSeek");
 
     const wrapper = document.createElement("div");
@@ -75,7 +115,7 @@
 
     const title = document.createElement("span");
     title.id = "chatTitle";
-    title.textContent = config.assistantTitle;
+    title.textContent = strings().assistantTitle;
 
     const chat = document.createElement("div");
     chat.id = "chat";
@@ -145,7 +185,7 @@
         history = [
           {
             role: "system",
-            content: buildSystemMessage(config),
+            content: buildSystemMessage(config, lang),
           },
         ];
       }
@@ -178,7 +218,7 @@
         }
 
         dots = (dots + 1) % 4;
-        thinkingElement.textContent = config.thinkingLabel + ".".repeat(dots);
+        thinkingElement.textContent = strings().thinkingLabel + ".".repeat(dots);
       }, 500);
     }
 
@@ -223,7 +263,7 @@
       appendMessage("user", text);
       history.push({ role: "user", content: text });
 
-      const thinkingElement = appendMessage("ai", config.thinkingLabel);
+      const thinkingElement = appendMessage("ai", strings().thinkingLabel);
       thinkingElement.id = "thinking";
 
       setInputDisabled(true);
@@ -243,12 +283,12 @@
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data?.error?.message || `\u8bf7\u6c42\u5931\u8d25 (HTTP ${response.status})`);
+          throw new Error(data?.error?.message || `${strings().requestFailed} (HTTP ${response.status})`);
         }
 
         const reply = data?.choices?.[0]?.message?.content;
         if (!reply) {
-          throw new Error(data?.error?.message || "\u63a5\u53e3\u5df2\u8fd4\u56de\uff0c\u4f46\u6ca1\u6709\u53ef\u7528\u7684\u56de\u590d\u5185\u5bb9\u3002");
+          throw new Error(data?.error?.message || strings().emptyReply);
         }
 
         history.push({ role: "assistant", content: reply });
@@ -260,7 +300,7 @@
       } catch (error) {
         stopThinkingAnimation();
         thinkingElement.remove();
-        appendMessage("ai", error?.message || "\u8bf7\u6c42\u5931\u8d25");
+        appendMessage("ai", error?.message || strings().requestFailed);
         console.error(error);
       } finally {
         waitingForReply = false;
@@ -290,12 +330,12 @@
       const input = document.createElement("input");
       input.id = "userInput";
       input.type = "text";
-      input.placeholder = config.placeholder;
+      input.placeholder = strings().placeholder;
 
       const sendButton = document.createElement("button");
       sendButton.id = "sendBtn";
       sendButton.type = "button";
-      sendButton.textContent = config.sendLabel;
+      sendButton.textContent = strings().sendLabel;
 
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
@@ -525,5 +565,37 @@
     window.addEventListener("pointerup", endDrag);
     window.addEventListener("pointercancel", endDrag);
     window.addEventListener("resize", handleResize);
+
+    // ── 语言切换 ──────────────────────────────────────────────
+    function applyLanguage(nextLang) {
+      const changed = nextLang !== lang;
+      lang = nextLang === "en" ? "en" : "zh";
+
+      title.textContent = strings().assistantTitle;
+      button.setAttribute("aria-label", strings().openAriaLabel);
+
+      const input = document.getElementById("userInput");
+      if (input) input.placeholder = strings().placeholder;
+      const sendButton = document.getElementById("sendBtn");
+      if (sendButton) sendButton.textContent = strings().sendLabel;
+
+      // system message 决定回答语言；切换时重建，保证下一条回复用新语言。
+      if (history && history.length && history[0].role === "system") {
+        history[0].content = buildSystemMessage(config, lang);
+      }
+      // 已展开的输入框文案已在上面更新；无需重建 DOM，避免丢失输入焦点。
+      return changed;
+    }
+
+    window.addEventListener("site-lang-changed", (event) => {
+      applyLanguage(event?.detail?.lang || readLang());
+    });
+    // 跨标签页同步（localStorage 的 storage 事件不会在同文档触发）
+    window.addEventListener("storage", (event) => {
+      if (event.key === "site-lang") applyLanguage(readLang());
+    });
+
+    // 初始化时按当前语言校准一次
+    applyLanguage(lang);
   });
 })();

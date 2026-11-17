@@ -1,6 +1,9 @@
 import { computed, ref } from 'vue'
 
-const currentLang = ref(typeof window !== 'undefined' && window.localStorage.getItem('site-lang') === 'en' ? 'en' : 'zh')
+// 默认英文；仅当用户明确保存过 'zh' 时才用中文
+const currentLang = ref(
+  typeof window !== 'undefined' && window.localStorage.getItem('site-lang') === 'zh' ? 'zh' : 'en',
+)
 const volumeMuted = ref(typeof window !== 'undefined' && window.localStorage.getItem('site-volume-muted') === '1')
 
 const headerTranslations = {
@@ -27,6 +30,8 @@ function persistState() {
 
   window.localStorage.setItem('site-lang', currentLang.value)
   window.localStorage.setItem('site-volume-muted', volumeMuted.value ? '1' : '0')
+  // 通知同页面的非 Vue 组件（如 legacy 场景里的 AI 助手 widget）
+  window.dispatchEvent(new CustomEvent('site-lang-changed', { detail: { lang: currentLang.value } }))
 }
 
 export function useSiteChrome() {

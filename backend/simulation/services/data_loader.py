@@ -29,7 +29,7 @@ MODULE_CATALOG = [
     {
         "slug": "realtime",
         "title": "实时天体追踪",
-        "summary": "基于 Skyfield + JPL DE430 本地星历计算天体实时位置（国内可用，完全离线）。",
+        "summary": "基于 Skyfield + JPL DE440 本地星历计算天体实时位置（国内可用，完全离线）。",
         "description": "",
         "route": "/realtime",
         "preview_image": "/assets/simulation/models/sys.jpg",
