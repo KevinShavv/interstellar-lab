@@ -129,18 +129,65 @@ h1 {
     background: #000;
 }
 
+/* 星云运转加载动画：核心 + 三条倾斜旋转的星云臂 + 弥散粒子 */
 .loader {
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    width: 92px;
+    height: 92px;
     border-radius: 50%;
-    border-top: 5px solid #8fb5c8;
-    animation: spin 1s linear infinite;
+    background: radial-gradient(circle at 50% 50%,
+        rgba(232, 240, 255, 0.95) 0%,
+        rgba(143, 181, 200, 0.55) 12%,
+        rgba(122, 162, 247, 0.12) 34%,
+        transparent 62%);
+    box-shadow:
+        0 0 24px rgba(122, 162, 247, 0.45),
+        0 0 48px rgba(157, 124, 216, 0.28),
+        inset 0 0 18px rgba(232, 240, 255, 0.35);
+    animation: nebula-breathe 2.6s ease-in-out infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
+/* 星云核心 */
+.loader::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ffffff 0%, #cfe0ff 45%, transparent 75%);
+    box-shadow: 0 0 16px 4px rgba(180, 205, 255, 0.8);
+    animation: nebula-core 2.6s ease-in-out infinite;
+}
+
+/* 三条旋转的星云臂（椭圆轨道） */
+.loader::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse 46px 15px at 50% 50%, transparent 60%, rgba(122, 162, 247, 0.55) 78%, transparent 92%),
+        radial-gradient(ellipse 46px 15px at 50% 50%, transparent 60%, rgba(157, 124, 216, 0.5) 78%, transparent 92%),
+        radial-gradient(ellipse 46px 15px at 50% 50%, transparent 60%, rgba(137, 209, 224, 0.45) 78%, transparent 92%);
+    animation: nebula-spin 3.4s linear infinite;
+}
+
+@keyframes nebula-spin {
+    0%   { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@keyframes nebula-breathe {
+    0%, 100% { transform: scale(0.94); opacity: 0.85; }
+    50%      { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes nebula-core {
+    0%, 100% { transform: scale(0.9); filter: brightness(1); }
+    50%      { transform: scale(1.25); filter: brightness(1.35); }
 }
 
 #loading-text {
