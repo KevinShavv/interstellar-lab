@@ -256,6 +256,174 @@
     },
   };
 
+  // ── 通用可见文本字典（子串替换，覆盖所有 legacy 页面的静态 + 动态文案）──
+  // 只用于文本节点/可访问性属性，绝不用于 value/id/class（那些是 JS 逻辑键，中文不能改）。
+  const TEXT_MAP = {
+    // 加载 / 通知
+    '正在加载天体模型': 'Loading celestial model',
+    '正在加载太阳系模型': 'Loading the solar system model',
+    '正在加载日地月模型': 'Loading the Earth-Moon-Sun model',
+    '模型加载完成': 'Model loaded successfully',
+    '太阳系模型加载完成': 'Solar system model loaded successfully',
+    '日地月模型加载完成': 'Earth-Moon-Sun model loaded successfully',
+    // 控制面板通用
+    '时间流速': 'Time Scale',
+    '自由视角': 'Free View',
+    '跟随行星': 'Follow Planet',
+    '选择行星': 'Planet',
+    '暂停': 'Pause',
+    '恢复': 'Resume',
+    '重置': 'Reset',
+    // Skyfield 查询面板
+    '实时星历': 'Real-time Ephemeris',
+    '查询日期': 'Query Date',
+    '查询并更新场景': 'Query & Update Scene',
+    '星历数据': 'Ephemeris Data',
+    '请选择日期': 'Please select a date',
+    '计算中': 'Calculating',
+    '正在计算所有行星位置': 'Computing all planet positions',
+    '已更新 ': 'Updated ',
+    ' 个天体': ' bodies',
+    '日心坐标': 'Heliocentric Coordinates',
+    '日心距': 'Heliocentric Distance',
+    '天体': 'Body',
+    '错误:': 'Error:',
+    ' 个天体已锁定在 ': ' bodies locked at ',
+    ' 真实位置（暂停动画查看）': ' real positions (pause animation to view)',
+    // 页面标题 / 导航
+    '日地月特殊节点': 'Earth-Moon-Sun Special Nodes',
+    '日地月 · 特殊节点': 'Earth-Moon · Special Nodes',
+    '实时天体追踪': 'Real-time Celestial Tracking',
+    // 实验室复选框 / 按钮
+    '引力 G': 'Gravity G',
+    '名称': 'Names',
+    '轨迹': 'Trails',
+    '自定义': 'Custom',
+    '默认': 'Default',
+    '已添加星体': 'Added Bodies',
+    '开始模拟': 'Start Simulation',
+    '暂停模拟': 'Pause Simulation',
+    '添加星体': 'Add Bodies',
+    '天体尺度': 'Body Scale',
+    '应用': 'Apply',
+    '拖动滑块可加速或减慢系统演化': 'Drag the slider to speed up or slow down the simulation',
+    // 季节 / 特殊节点
+    '特殊节点': 'Special Nodes',
+    '收起': 'Collapse',
+    '春分': 'Vernal Equinox',
+    '夏至': 'Summer Solstice',
+    '秋分': 'Autumnal Equinox',
+    '冬至': 'Winter Solstice',
+    '近日点': 'Perihelion',
+    '远日点': 'Aphelion',
+    '日全食': 'Total Solar Eclipse',
+    '月全食': 'Total Lunar Eclipse',
+    '中秋月相': 'Mid-Autumn Moon',
+    '退出定格': 'Exit Freeze',
+    '正在前往:': 'Heading to:',
+    '已定格:': 'Frozen at:',
+    '可自由拖动视角': 'Drag to rotate the view freely',
+    '太阳直射赤道，昼夜等长': 'Sun over the equator; equal day and night',
+    '太阳直射北回归线23.44°N': 'Sun over the Tropic of Cancer 23.44°N',
+    '太阳直射南回归线23.44°S': 'Sun over the Tropic of Capricorn 23.44°S',
+    '3月20日': 'Mar 20',
+    '6月21日': 'Jun 21',
+    '9月22日': 'Sep 22',
+    '12月21日': 'Dec 21',
+    // 距离标尺（整段匹配，避免拆分数字）
+    '≈1.47亿km': '≈147 million km',
+    '≈1.52亿km': '≈152 million km',
+    '≈1.50亿km': '≈150 million km',
+    ' 日地距离': ' Earth-Sun distance',
+    // 带 emoji / 空格 / 星座符号的标题变体
+    '春 分': 'Vernal Equinox', '夏 至': 'Summer Solstice',
+    '秋 分': 'Autumnal Equinox', '冬 至': 'Winter Solstice',
+    '春分 ♈': 'Vernal Equinox ♈', '夏至 ♋': 'Summer Solstice ♋',
+    '秋分 ♎': 'Autumnal Equinox ♎', '冬至 ♑': 'Winter Solstice ♑',
+    '日全食 ☀️🌑': 'Total Solar Eclipse ☀️🌑', '月全食 🌕🌑': 'Total Lunar Eclipse 🌕🌑',
+    '中秋月相 🥮': 'Mid-Autumn Moon 🥮',
+    // 行星名（显示文本）
+    '太阳': 'Sun', '水星': 'Mercury', '金星': 'Venus', '地球': 'Earth',
+    '月球': 'Moon', '火星': 'Mars', '木星': 'Jupiter', '土星': 'Saturn',
+    '天王星': 'Uranus', '海王星': 'Neptune',
+  };
+  // 还原时用（英文 → 中文），仅对带 __i18nOriginal 标记的节点生效，不依赖字典反查
+  const ATTR_KEYS = ['title', 'placeholder', 'aria-label'];
+
+  function translateString(raw) {
+    if (!raw || typeof raw !== 'string') return raw;
+    let out = raw;
+    // 长键优先，避免短键先替换造成歧义（如 日全食 vs 日）
+    const keys = Object.keys(TEXT_MAP).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (out.indexOf(key) !== -1) {
+        out = out.split(key).join(TEXT_MAP[key]);
+      }
+    }
+    return out;
+  }
+
+  function isStructural(node) {
+    const el = node && (node.nodeType === 3 ? node.parentElement : node);
+    if (!el) return true;
+    // 绝不碰 script/style 内容
+    return Boolean(el.closest('script, style'));
+  }
+
+  // 对单个文本节点做英译 / 还原
+  function processTextNode(node) {
+    if (!node || node.nodeType !== 3 || isStructural(node)) return;
+    const raw = node.nodeValue;
+    if (!raw || !raw.trim()) return;
+    if (currentLang === 'en') {
+      if (node.__i18nOriginal === undefined) {
+        const translated = translateString(raw);
+        if (translated !== raw) {
+          node.__i18nOriginal = raw;
+          node.nodeValue = translated;
+        }
+      }
+    } else if (node.__i18nOriginal !== undefined) {
+      node.nodeValue = node.__i18nOriginal;
+      delete node.__i18nOriginal;
+    }
+  }
+
+  function processAttributes(el) {
+    if (!el || el.nodeType !== 1 || isStructural(el)) return;
+    ATTR_KEYS.forEach((attr) => {
+      const raw = el.getAttribute(attr);
+      if (!raw) return;
+      const storeKey = '__i18nAttr_' + attr;
+      if (currentLang === 'en') {
+        if (el[storeKey] === undefined) {
+          const translated = translateString(raw);
+          if (translated !== raw) {
+            el[storeKey] = raw;
+            el.setAttribute(attr, translated);
+          }
+        }
+      } else if (el[storeKey] !== undefined) {
+        el.setAttribute(attr, el[storeKey]);
+        delete el[storeKey];
+      }
+    });
+  }
+
+  function applyGenericText() {
+    if (currentLang !== 'en') {
+      // 还原：只处理被本层标记过的节点
+      const marked = document.querySelectorAll('[data-i18n-marked]');
+      // 文本节点没有 CSS 选择器，用 TreeWalker 统一还原
+    }
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      processTextNode(node);
+    }
+    document.querySelectorAll('*').forEach(processAttributes);
+  }
+
   function setLang(nextLang) {
     currentLang = nextLang === 'en' ? 'en' : 'zh';
     window.localStorage.setItem(storageKey, currentLang);
@@ -698,6 +866,36 @@
     applySolar();
     applyLaunch();
     applyLab();
+    // 兜底：处理上面三个专用函数未覆盖的可见中文（Skyfield 面板、季节面板、实验室复选按钮等）
+    applyGenericText();
+  }
+
+  // 动态生成的内容（查询结果表格、季节面板、通知）用 MutationObserver 持续英译
+  function installGenericObserver() {
+    if (!document.body || document.body.__legacyGenericObserver) return;
+    const observer = new MutationObserver((mutations) => {
+      if (currentLang !== 'en') return;
+      let changed = false;
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType === 3) { processTextNode(n); changed = true; }
+          else if (n.nodeType === 1) {
+            if (n.nodeValue !== undefined) processTextNode(n.firstChild);
+            processAttributes(n);
+            n.querySelectorAll?.('*').forEach(processAttributes);
+            const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+            let t; while ((t = w.nextNode())) processTextNode(t);
+          }
+        });
+        if (m.type === 'characterData' && m.target.nodeType === 3) { processTextNode(m.target); changed = true; }
+        if (m.type === 'attributes' && m.target.nodeType === 1) processAttributes(m.target);
+      });
+    });
+    observer.observe(document.body, {
+      childList: true, subtree: true, characterData: true, attributes: true,
+      attributeFilter: ATTR_KEYS,
+    });
+    document.body.__legacyGenericObserver = observer;
   }
 
   window.addEventListener('message', (event) => {
@@ -719,4 +917,11 @@
   wireSolar();
   wireLaunch();
   wireLab();
+  installGenericObserver();
+  // 首屏兜底：DOMContentLoaded 后再跑一次，确保动态脚本已生成的节点被翻译
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => applyGenericText());
+  } else {
+    applyGenericText();
+  }
 })();
